@@ -1,4 +1,4 @@
-package oneappconfig
+package godbmanager
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 )
 
+//Query class that holds the transaction query string and params
 type Query struct {
 	sqlQuery                  string
 	params                    []interface{}
@@ -13,6 +14,7 @@ type Query struct {
 	transactionIdOnExec       int64
 }
 
+//SqlManager class
 type sqlManager struct {
 	queries []Query
 }
@@ -29,12 +31,16 @@ func (sqlManager sqlManager) Update(query string) {
 
 }
 
+//Performs Row Query
 func (sqlManager sqlManager) QueryRow(query string, args ...interface{}) *sql.Row {
 	fmt.Println("query", query)
 	fmt.Println("params", args)
 	return Db.QueryRow(query, args...)
 }
 
+//Performs bulk transaction
+//@param transactionIdOfOtherQuery - The transaction id of the previous query
+//@params - here pass nil where you want transaction id of previous query to be replaced with this nil param
 func (sqlManager *sqlManager) AddTransaction(query string, transactionIdOfOtherQuery int, params ...interface{}) int {
 
 	q := Query{sqlQuery: query, params: params, transactionIdOfOtherQuery: transactionIdOfOtherQuery}
@@ -45,6 +51,7 @@ func (sqlManager *sqlManager) AddTransaction(query string, transactionIdOfOtherQ
 	return id - 1
 }
 
+//Perform transaction commit. if failed will rollback
 func (sqlManager sqlManager) PerformTransactions() bool {
 	tx, err := Db.Begin()
 	if err != nil {
@@ -88,10 +95,12 @@ func (sqlManager sqlManager) PerformTransactions() bool {
 	}
 }
 
+//return interface to perform sql query/transation
 func GetSqlHandler() SqlHandler {
 	return &sqlManager{}
 }
 
+//Interface helper methods
 type SqlHandler interface {
 	Insert(query string)
 	Update(query string)

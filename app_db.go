@@ -1,4 +1,4 @@
-package oneappconfig
+package godbmanager
 
 import _ "github.com/go-sql-driver/mysql"
 import (
@@ -9,9 +9,9 @@ import (
 var (
 	Db  *sql.DB
 	err error
-	sqlConfig SQLConfig
 )
 
+//Struct that holds sql connection details
 type SQLConfig struct {
 	Username string
 	Password string
@@ -20,20 +20,8 @@ type SQLConfig struct {
 	DatabaseName string
 }
 
-func init() {
-	Db, err = sql.Open("mysql", sqlConfig.dbConnectionString())
-	if err != nil {
-		panic(err.Error())
-	}
-	//defer db.Close()
-	err = Db.Ping()
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Println("DB connected")
 
-}
-
+//function to create connection string "root:<password>@/<dbname>"
 func (sqlConfig SQLConfig) dbConnectionString() string {
 	var cred string
 	// [username[:password]@]
@@ -48,11 +36,22 @@ func (sqlConfig SQLConfig) dbConnectionString() string {
 	return fmt.Sprintf("%stcp([%s]:%d)/%s", cred, sqlConfig.Host, sqlConfig.Port, sqlConfig.DatabaseName)
 }
 
-func Start(config SQLConfig) {
-	sqlConfig = config
+//Connect to MqSql Database
+func StartMySqlService(config SQLConfig) {
+	Db, err = sql.Open("mysql", config.dbConnectionString())
+	if err != nil {
+		panic(err.Error())
+	}
+	//defer db.Close()
+	err = Db.Ping()
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Println("DB connected")
 }
 
-func Stop() {
+//Stop MySql Database
+func StoptMySqlService() {
 	//if stop db is immediately called make sure than there is another instance of server running
 	// find that instance with ps -ef | grep oneapp and kill
 	fmt.Println("stop DB")
