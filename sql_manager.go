@@ -38,6 +38,16 @@ func (sqlManager sqlManager) QueryRow(query string, args ...interface{}) *sql.Ro
 	return Db.QueryRow(query, args...)
 }
 
+//Performs Row Query
+func (sqlManager sqlManager) QueryRows(query string, args ...interface{}) (*sql.Rows, error) {
+	fmt.Println("query", query)
+	fmt.Println("params", args)
+	rows, err := Db.Query(query, args...)
+	//todo find way to write defer here as now the function who calls this method has to write defer rows.close()
+	//defer func() { rows.Close() }()
+	return rows, err
+}
+
 //Performs bulk transaction
 //@param transactionIdOfOtherQuery - The transaction id of the previous query
 //@params - here pass nil where you want transaction id of previous query to be replaced with this nil param
@@ -105,6 +115,7 @@ type SqlHandler interface {
 	Insert(query string)
 	Update(query string)
 	QueryRow(query string, params ...interface{}) *sql.Row
+	QueryRows(query string, params ...interface{}) (*sql.Rows, error)
 	AddTransaction(query string, lastTransactionId int, params ...interface{}) int
 	PerformTransactions() bool
 }
