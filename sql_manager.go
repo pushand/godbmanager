@@ -1,8 +1,8 @@
 package godbmanager
 
 import (
-	"fmt"
 	"database/sql"
+	"fmt"
 	"reflect"
 )
 

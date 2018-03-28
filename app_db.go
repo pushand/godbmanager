@@ -13,13 +13,12 @@ var (
 
 //Struct that holds sql connection details
 type SQLConfig struct {
-	Username string
-	Password string
-	Host string
-	Port int
+	Username     string
+	Password     string
+	Host         string
+	Port         int
 	DatabaseName string
 }
-
 
 //function to create connection string "root:<password>@/<dbname>"
 func (sqlConfig SQLConfig) dbConnectionString() string {
