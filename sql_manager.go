@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"log"
 )
 
 //Query class that holds the transaction query string and params
@@ -23,8 +24,29 @@ func (sqlManager sqlManager) getQuery(query string) {
 
 }
 
-func (sqlManager sqlManager) Insert(query string) {
-
+func (sqlManager sqlManager) Insert(query string, args ...interface{}) (int64, int64, error) {
+	stmt, err := Db.Prepare(query)
+	if err != nil {
+		fmt.Println(err)
+		return 0, 0, err
+	}
+	res, err := stmt.Exec(args...)
+	if err != nil {
+		fmt.Println(err)
+		return 0, 0, err
+	}
+	lastId, err := res.LastInsertId()
+	if err != nil {
+		fmt.Println(err)
+		return 0, 0, err
+	}
+	rowCnt, err := res.RowsAffected()
+	if err != nil {
+		fmt.Println(err)
+		return 0, 0, err
+	}
+	log.Printf("ID = %d, affected = %d\n", lastId, rowCnt)
+	return lastId, rowCnt, nil
 }
 
 func (sqlManager sqlManager) Update(query string) {
@@ -112,7 +134,7 @@ func GetSqlHandler() SqlHandler {
 
 //Interface helper methods
 type SqlHandler interface {
-	Insert(query string)
+	Insert(query string, params ...interface{}) (int64, int64, error)
 	Update(query string)
 	QueryRow(query string, params ...interface{}) *sql.Row
 	QueryRows(query string, params ...interface{}) (*sql.Rows, error)
