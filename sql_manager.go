@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"log"
 )
 
 //Query class that holds the transaction query string and params
@@ -25,7 +24,7 @@ func (sqlManager sqlManager) getQuery(query string) {
 }
 
 func (sqlManager sqlManager) Insert(query string, args ...interface{}) (int64, int64, error) {
-	stmt, err := Db.Prepare(query)
+	/*stmt, err := Db.Prepare(query)
 	if err != nil {
 		fmt.Println(err)
 		return 0, 0, err
@@ -45,8 +44,8 @@ func (sqlManager sqlManager) Insert(query string, args ...interface{}) (int64, i
 		fmt.Println(err)
 		return 0, 0, err
 	}
-	log.Printf("ID = %d, affected = %d\n", lastId, rowCnt)
-	return lastId, rowCnt, nil
+	log.Printf("ID = %d, affected = %d\n", lastId, rowCnt)*/
+	return 0, 0, nil
 }
 
 func (sqlManager sqlManager) Update(query string) {
