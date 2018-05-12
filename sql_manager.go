@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"log"
 )
 
 //Query class that holds the transaction query string and params
@@ -24,7 +25,7 @@ func (sqlManager sqlManager) getQuery(query string) {
 }
 
 func (sqlManager sqlManager) Insert(query string, args ...interface{}) (int64, int64, error) {
-	/*stmt, err := Db.Prepare(query)
+	stmt, err := Db.Prepare(query)
 	if err != nil {
 		fmt.Println(err)
 		return 0, 0, err
@@ -44,8 +45,8 @@ func (sqlManager sqlManager) Insert(query string, args ...interface{}) (int64, i
 		fmt.Println(err)
 		return 0, 0, err
 	}
-	log.Printf("ID = %d, affected = %d\n", lastId, rowCnt)*/
-	return 0, 0, nil
+	log.Printf("ID = %d, affected = %d\n", lastId, rowCnt)
+	return lastId, rowCnt, nil
 }
 
 func (sqlManager sqlManager) Update(query string) {
@@ -90,11 +91,11 @@ func (sqlManager sqlManager) PerformTransactions() bool {
 	} else {
 		fmt.Println("len of queries", len(sqlManager.queries))
 		for index, query := range sqlManager.queries {
-			fmt.Println(index, query.sqlQuery)
-			fmt.Println("transactionIdOfOtherQuery", query.transactionIdOfOtherQuery)
+			//fmt.Println(index, query.sqlQuery)
+			//fmt.Println("transactionIdOfOtherQuery", query.transactionIdOfOtherQuery)
 			if query.transactionIdOfOtherQuery != -1 {
 				for i, a := range query.params {
-					fmt.Println(i, reflect.ValueOf(a).IsValid())
+					//fmt.Println(i, reflect.ValueOf(a).IsValid())
 					if !reflect.ValueOf(a).IsValid() {
 						query.params[i] = sqlManager.queries[query.transactionIdOfOtherQuery].transactionIdOnExec
 						break
