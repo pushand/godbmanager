@@ -9,7 +9,6 @@ import (
 
 //Query class that holds the transaction query string and params
 type Query struct {
-	sqlQuery                  string
 	params                    []interface{}
 	transactionIdOfOtherQuery int
 	transactionIdOnExec       int64
@@ -18,6 +17,7 @@ type Query struct {
 //SqlManager class
 type sqlManager struct {
 	queries []Query
+	sqlQuery string
 }
 
 func (sqlManager sqlManager) getQuery(query string) {
@@ -26,6 +26,7 @@ func (sqlManager sqlManager) getQuery(query string) {
 
 func (sqlManager sqlManager) Insert(query string, args ...interface{}) (int64, int64, error) {
 	stmt, err := Db.Prepare(query)
+	defer stmt.Close()
 	if err != nil {
 		fmt.Println(err)
 		return 0, 0, err
@@ -57,26 +58,41 @@ func (sqlManager sqlManager) Update(query string) {
 func (sqlManager sqlManager) QueryRow(query string, args ...interface{}) *sql.Row {
 	fmt.Println("query", query)
 	fmt.Println("params", args)
-	return Db.QueryRow(query, args...)
+
+	stmt, err := Db.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	return stmt.QueryRow(args...)
 }
 
 //Performs Row Query
 func (sqlManager sqlManager) QueryRows(query string, args ...interface{}) (*sql.Rows, error) {
 	fmt.Println("query", query)
 	fmt.Println("params", args)
-	rows, err := Db.Query(query, args...)
+
+	stmt, err := Db.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(args...)
+
 	//todo find way to write defer here as now the function who calls this method has to write defer rows.close()
 	//defer func() { rows.Close() }()
 	return rows, err
 }
 
+func (sqlManager *sqlManager) AddTransactionQuery(query string) {
+	sqlManager.sqlQuery = query
+}
+
 //Performs bulk transaction
 //@param transactionIdOfOtherQuery - The transaction id of the previous query
 //@params - here pass nil where you want transaction id of previous query to be replaced with this nil param
-func (sqlManager *sqlManager) AddTransaction(query string, transactionIdOfOtherQuery int, params ...interface{}) int {
-
-	q := Query{sqlQuery: query, params: params, transactionIdOfOtherQuery: transactionIdOfOtherQuery}
-
+func (sqlManager *sqlManager) AddTransactions(transactionIdOfOtherQuery int, params ...interface{}) int {
+	q := Query{params: params, transactionIdOfOtherQuery: transactionIdOfOtherQuery}
 	sqlManager.queries = append(sqlManager.queries, q)
 	id := len(sqlManager.queries)
 	fmt.Println("total query added ", id)
@@ -84,12 +100,23 @@ func (sqlManager *sqlManager) AddTransaction(query string, transactionIdOfOtherQ
 }
 
 //Perform transaction commit. if failed will rollback
-func (sqlManager sqlManager) PerformTransactions() bool {
+func (sqlManager sqlManager) PerformTransactions() error {
+	totalQueries := len(sqlManager.queries)
+	if totalQueries == 0 {
+		return nil
+	}
 	tx, err := Db.Begin()
 	if err != nil {
-		return false
+		return err
 	} else {
 		fmt.Println("len of queries", len(sqlManager.queries))
+		defer tx.Rollback()
+		stmt, err := tx.Prepare(sqlManager.sqlQuery)
+		defer stmt.Close()
+		if err != nil {
+			fmt.Println("stmt", err)
+			return err
+		}
 		for index, query := range sqlManager.queries {
 			//fmt.Println(index, query.sqlQuery)
 			//fmt.Println("transactionIdOfOtherQuery", query.transactionIdOfOtherQuery)
@@ -103,26 +130,24 @@ func (sqlManager sqlManager) PerformTransactions() bool {
 				}
 			}
 
-			result, err := tx.Exec(query.sqlQuery, query.params...)
+			result, err := stmt.Exec(query.params...)
 			if err != nil {
 				fmt.Println("Rollback", err)
-				tx.Rollback()
-				break
+				return err
 			} else {
 				sqlManager.queries[index].transactionIdOnExec, err = result.LastInsertId()
 				if err != nil {
-					break
+					return err
 				}
 			}
 		}
-		err := tx.Commit()
-		if err != nil {
-			fmt.Println("Commit err", err)
-			tx.Rollback()
-			return false
+		errCommit := tx.Commit()
+		if errCommit != nil {
+			fmt.Println("Commit err", errCommit)
+			return err
 		} else {
 			fmt.Println("Commit success")
-			return true
+			return nil
 		}
 	}
 }
@@ -138,6 +163,7 @@ type SqlHandler interface {
 	Update(query string)
 	QueryRow(query string, params ...interface{}) *sql.Row
 	QueryRows(query string, params ...interface{}) (*sql.Rows, error)
-	AddTransaction(query string, lastTransactionId int, params ...interface{}) int
-	PerformTransactions() bool
+	AddTransactionQuery(query string)
+	AddTransactions(lastTransactionId int, params ...interface{}) int
+	PerformTransactions() error
 }
